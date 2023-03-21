@@ -1,2 +1,2 @@
 # nuxt-tensorflow-mobilenet
-NuxtJS Tensorflow Mobilenet module~
+Nuxt JS Tensorflow Mobilenet module~
