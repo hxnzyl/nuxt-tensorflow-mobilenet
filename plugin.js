@@ -116,8 +116,6 @@ TensorflowMobilenetPlugin.prototype = {
 							//截取中
 							detecting = true
 							detectNum++
-							//暂停播放
-							if (!video.paused) video.pause()
 							//视频截图
 							const canvas = document.createElement('canvas')
 							canvas.width = video.videoWidth
@@ -126,7 +124,7 @@ TensorflowMobilenetPlugin.prototype = {
 							context.drawImage(video, 0, 0, canvas.width, canvas.height)
 							//图片分类
 							this.model
-								.classify(context.getImageData(0, 0, canvas.width, canvas.height))
+								.classify(video)
 								.then((predictions) => {
 									screenshots.push({
 										currentTime: video.currentTime,
@@ -140,8 +138,6 @@ TensorflowMobilenetPlugin.prototype = {
 									detecting = false
 									//重新定位
 									video.currentTime = stepTime() * detectNum
-									//开始播放
-									if (video.paused) video.play()
 									//继续截图
 									setTimeout(screenshot, 16.7)
 								})
@@ -150,6 +146,51 @@ TensorflowMobilenetPlugin.prototype = {
 									detecting = false
 								})
 						}
+					}
+				})
+				.catch(reject)
+		})
+	},
+	/**
+	 * 图片分类
+	 *
+	 * @param {String} src
+	 * @param {Number} topk
+	 * @returns
+	 */
+	imageClassify(src, topk) {
+		return new Promise((resolve, reject) => {
+			if (this.detecting) return reject(new Error('detecting.'))
+
+			this.load()
+				.then(() => {
+					this.detecting = true
+					let img = new Image()
+					img.src = src
+					img.crossOrigin = 'anonymous'
+					img.onerror = (error) => {
+						reject(error)
+						this.detecting = false
+					}
+					img.onload = () => {
+						img.onload = img.onerror = null
+						this.model
+							.classify(img, topk)
+							.then((predictions) => {
+								this.detecting = false
+								img = null
+								resolve(
+									predictions.map((prediction) => ({
+										className: prediction.className,
+										probability: prediction.probability,
+										chClassName: mobilenetClasses[prediction.className.split(/,\s*/).shift().replace(/\s+/, '_')]
+									}))
+								)
+							})
+							.catch((error) => {
+								reject(error)
+								this.detecting = false
+							})
 					}
 				})
 				.catch(reject)
